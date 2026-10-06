@@ -17,5 +17,5 @@ public class CampSettlement {
         ModItems.ITEMS.register(bus);ModBlocks.BLOCKS.register(bus);
         bus.addListener(this::creativeTab);MinecraftForge.EVENT_BUS.register(com.example.campsettlement.event.CampEvents.class);
     }
-    private void creativeTab(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.TOOLS)e.accept(ModItems.CAMP_HEART);}
+    private void creativeTab(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.TOOLS_AND_UTILITIES)e.accept(ModItems.CAMP_HEART);}
 }
