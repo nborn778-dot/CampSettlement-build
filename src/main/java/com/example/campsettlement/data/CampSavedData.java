@@ -45,7 +45,7 @@ public class CampSavedData extends SavedData {
     }
 
     public static CampSavedData get(ServerLevel l){
-        return l.getDataStorage().computeIfAbsent(new SavedData.Factory<>(CampSavedData::new,CampSavedData::load,null),NAME);
+        return l.getDataStorage().computeIfAbsent(CampSavedData::load,CampSavedData::new,NAME);
     }
     public void createCamp(BlockPos p,long gameTime){camp=true;x=p.getX();y=p.getY();z=p.getZ();workers=0;guards=0;food=20;wood=10;stone=10;nextRaid=gameTime+12000L;nextProduction=gameTime+600L;setDirty();}
     public void removeCamp(){camp=false;workers=guards=0;outposts.clear();setDirty();}
