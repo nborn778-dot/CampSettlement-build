@@ -1,39 +1,79 @@
 package com.example.campsettlement.client;
 
-import com.example.campsettlement.CampSettlement;
+import com.example.campsettlement.action.CampActions;
+import com.example.campsettlement.building.BuildingManager;
 import com.example.campsettlement.data.CampSavedData;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
-@Mod.EventBusSubscriber(modid=CampSettlement.MOD_ID,value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
-public class CampClient {
-    public static final KeyMapping OPEN_CAMP = new KeyMapping("key.campsettlement.open", GLFW.GLFW_KEY_G, "key.categories.campsettlement");
+import java.util.UUID;
+import java.util.function.Consumer;
 
-    @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(OPEN_CAMP);}
+public final class CampClient {
+    private CampClient() {}
 
-    @Mod.EventBusSubscriber(modid=CampSettlement.MOD_ID,value=Dist.CLIENT)
-    public static class InputHandler {
-        @SubscribeEvent public static void input(InputEvent.Key e){
-            if(e.getAction()==GLFW.GLFW_PRESS && OPEN_CAMP.consumeClick()){
-                Minecraft mc=Minecraft.getInstance();
-                if(mc.player!=null && mc.getSingleplayerServer()!=null) mc.setScreen(new CampScreen());
-            }
-        }
+    public record CampStats(int residents, int pending, int capacity, int tents, int farms, int lumber) {}
+
+    public static void openCampScreen(BlockPos pos) {
+        Minecraft.getInstance().setScreen(new CampScreen(pos));
     }
 
-    public static void serverAction(java.util.function.Consumer<CampSavedData> action){
-        Minecraft mc=Minecraft.getInstance();
-        if(mc.getSingleplayerServer()==null)return;
-        mc.getSingleplayerServer().execute(()->{
-            var level=mc.getSingleplayerServer().overworld();
-            CampSavedData d=CampSavedData.get(level);
-            if(d.hasCamp()) action.accept(d);
+    public static void openSettlerScreen(int entityId) {
+        Minecraft.getInstance().setScreen(new SettlerScreen(entityId));
+    }
+
+    public static void runServer(Consumer<ServerPlayer> action) {
+        Minecraft mc = Minecraft.getInstance();
+        MinecraftServer server = mc.getSingleplayerServer();
+        if (server == null || mc.player == null) return;
+        UUID id = mc.player.getUUID();
+
+        server.execute(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(id);
+            if (player != null) action.accept(player);
         });
+    }
+
+    public static CampStats stats(BlockPos campPos) {
+        MinecraftServer server = Minecraft.getInstance().getSingleplayerServer();
+        if (server == null) return new CampStats(0,0,0,0,0,0);
+
+        ServerLevel level = server.overworld();
+        CampSavedData data = CampSavedData.get(level);
+        if (!data.hasCamp()) return new CampStats(0,0,0,0,0,0);
+
+        return new CampStats(
+                CampActions.countAccepted(level, campPos),
+                CampActions.countPending(level, campPos),
+                data.residentCapacity(),
+                data.countBuildings(BuildingManager.TENT),
+                data.countBuildings(BuildingManager.FARM),
+                data.countBuildings(BuildingManager.LUMBER)
+        );
+    }
+
+    public static boolean slotFree(BlockPos campPos, String type, int slot) {
+        MinecraftServer server = Minecraft.getInstance().getSingleplayerServer();
+        if (server == null) return false;
+        return BuildingManager.isSlotFree(server.overworld(), campPos, type, slot);
+    }
+
+    public static void build(BlockPos campPos, String type, int slot) {
+        runServer(player -> CampActions.build(player, campPos, type, slot));
+    }
+
+    public static void acceptSettler(int entityId) {
+        runServer(player -> CampActions.accept(player, entityId));
+    }
+
+    public static void rejectSettler(int entityId) {
+        runServer(player -> CampActions.reject(player, entityId));
+    }
+
+    public static void assignJob(int entityId, String job) {
+        runServer(player -> CampActions.assignJob(player, entityId, job));
     }
 }

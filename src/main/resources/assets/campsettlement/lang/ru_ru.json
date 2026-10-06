@@ -1,1 +1,5 @@
-{"item.campsettlement.camp_heart":"Сердце лагеря","block.campsettlement.camp_heart":"Сердце лагеря","key.campsettlement.open":"Управление лагерем","key.categories.campsettlement":"Camp Settlement"}
+{
+  "item.campsettlement.camp_heart": "Сердце лагеря",
+  "block.campsettlement.camp_heart": "Костёр поселения",
+  "entity.campsettlement.settler": "Поселенец"
+}
